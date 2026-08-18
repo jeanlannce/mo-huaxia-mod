@@ -809,3 +809,36 @@ ForbiddenHouses=Huaxia
 **检查前先区分节来源**：该节是否在 `rulesmo_huaxia.ini` 中被覆盖？没有 → 原版写法，跳过。
 
 **另**：`[MadBlastStartAI] Warhead=MadAIWH` 的弹头无定义节——**原版 MO 遗留**（Mental Omega 1.1 旧目录同样写法），游戏正常，不要动。
+
+### A19. 死亡自爆粒子链与凝固汽油云机制（NapalmCloudPart）⭐ 改狐步舞者类单位前必读
+
+**现象背景**：华夏破坏者（SBTRHX）/半机械先驱（CYBOHX）死亡自爆曾会"留下火焰"，火焰粒子有持续伤害。2026-08-18 已为这两个单位删除火焰（保留辐射）。本节记录完整机制，**未来修改任何带粒子武器的单位（如狐步舞者 Foxtrot 类）必须理解这条链**。
+
+**完整引用链（3 层）**：
+
+```
+[单位] DeathWeapon=某武器
+  → [某武器] Warhead=某弹头          ← 武器层
+      → [某弹头] Particle=某粒子系统    ← 弹头层（触发粒子）
+          → [ParticleSystems] 某粒子系统
+              HoldsWhat=某粒子类型       ← 粒子系统层
+                  → [某粒子类型] Damage=xx / Warhead=某弹头   ← 粒子类型层（伤害在这里！）
+```
+
+**以本次破坏者自爆为例**：
+
+| 层 | 节 | 关键键 | 值 |
+|---|---|---|---|
+| 武器 | `[SaboteurBombHX]` | Damage / Warhead | 150 / IvanDeathWH_HX |
+| 弹头 | `[IvanDeathWH_HX]` | **Particle** / RadLevel | **FoxtrotCloudSys** / 300 |
+| 粒子系统 | `[FoxtrotCloudSys]` | **HoldsWhat** / BehavesLike | **NapalmCloudPart** / Smoke（Spawns=yes 持续生成） |
+| 粒子类型 | `[NapalmCloudPart]` | **Damage / Warhead** | **20 / IvanFire**（Image=NAPALMF 火焰） |
+
+**关键认知（必须记住）**：
+1. **粒子伤害在"粒子类型"层**（`[NapalmCloudPart]` 的 `Damage=20` + `Warhead=IvanFire`），不在粒子系统、也不在弹头——想改火焰伤害改这里；想彻底去掉火焰，从**弹头**删 `Particle=` 行即可（粒子系统/类型是共享资源，不要删定义）
+2. **粒子系统可被多个弹头共用**：`FoxtrotCloudSys` 在原版 rulesmo.ini 被 3 个弹头引用（104639/104655/108512 行）+ 华夏 1 处（已删）——**只删目标弹头的 Particle 行，绝不动 [FoxtrotCloudSys] 定义本身**
+3. **死亡武器可被多个单位共用（陷阱！）**：`SaboteurBombHX` 同时被 SBTRHX 和 CYBOHX 引用——改它影响所有引用者。改单单位需克隆武器+弹头
+4. **死亡自爆的三层伤害**：爆炸瞬间（Damage×Verses）+ 火焰粒子（20/粒，IvanFire 弹头）+ 辐射场（RadLevel=300，走 RadSite 结算，对 hx_ 护甲低伤）
+5. **删除火焰保留辐射的正确写法**：只删 `Particle=FoxtrotCloudSys`，保留 `RadLevel=300`（2026-08-18 已按此执行，备份 bak_20260818_mp5 之后的状态）
+
+**未来改狐步舞者（Foxtrot 类）的入手点**：若该单位武器带 `Particle=FoxtrotCloudSys`，调火焰伤害 → 改 `[NapalmCloudPart]` 的 Damage/Warhead（注意全局影响！所有用该粒子的武器都会变）；若只想让某武器无火焰 → 删对应弹头的 Particle 行。
