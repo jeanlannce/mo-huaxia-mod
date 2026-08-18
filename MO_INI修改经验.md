@@ -80,8 +80,8 @@ ForbiddenHouses=USSR,Latin,Chinese ← 哪些阵营被禁止建造
 |---|---|---|---|
 | `Verses` | 对11种基础护甲的伤害% | `Verses=30%,40%,50%,...` | 顺序固定：none,flak,plate,light,medium,heavy,wood,steel,concrete,sp1,sp2 |
 | `CellSpread` | 爆炸/溅射扩散格数 | `CellSpread=.3` | 越小越集中 |
-| `Radiation` | 是否产生辐射场 | `Radiation=yes` | **必须配合武器层的 RadLevel 才生效！** |
-| `RadLevel` | 辐射强度 | `RadLevel=200` | 数值越高辐射越强 |
+| `Radiation` | 弹头伤害类型标记：`ImmuneToRadiation=yes` 的单位免疫此弹头 | `Radiation=yes` | **不是辐射场开关**；辐射场只由武器层 `RadLevel` 产生（见流程 D） |
+| `RadLevel` | 辐射强度（**仅武器层有效**） | `RadLevel=200` | 数值越高辐射越强；写在弹头层无效 |
 | `Versus.xxx` | 对特定护甲的修正 | `Versus.defense=45%` | 覆盖 Verses 中的对应值 |
 
 ### 11 种基础护甲对应关系
@@ -91,14 +91,16 @@ ForbiddenHouses=USSR,Latin,Chinese ← 哪些阵营被禁止建造
 | 1 | none | 基础步兵（动员兵、美国大兵） |
 | 2 | flak | 防弹步兵（防空兵、辐射工兵） |
 | 3 | plate | 重甲步兵（磁爆步兵、狂兽人） |
-| 4 | light | 轻型车辆（恐怖机器人、IFV） |
+| 4 | light | 轻型车辆（IFV、吉普类；恐怖机器人属 special_1） |
 | 5 | medium | 中型车辆（犀牛坦克） |
 | 6 | heavy | 重型车辆（天启坦克） |
 | 7 | wood | 木制建筑（兵营、电厂） |
 | 8 | steel | 钢制建筑（战车工厂） |
 | 9 | concrete | 混凝土建筑（围墙、碉堡） |
-| 10 | special_1 | 特殊（恐怖机器人、Drone） |
-| 11 | special_2 | 特殊（围墙等） |
+| 10 | special_1 | 特殊-无人机/恐怖机器人类（DRON 用 tdrn 继承此位；含 FDRON、NAFURY） |
+| 11 | special_2 | 特殊-子机导弹/火箭弹体（V3/V2 导弹 V3ROCKET 等；**不是围墙**） |
+
+> 备注：`[ArmorTypes]` 支持继承写法（如 `tdrn=special_1`），自定义护甲可继承基础位后通过 `Versus.xxx` 单独覆盖（华夏 hx_ 系列即此机制，见附录二 A16）。
 
 ### 建筑标签
 
@@ -120,7 +122,7 @@ ForbiddenHouses=USSR,Latin,Chinese ← 哪些阵营被禁止建造
 ### 1. `[Countries]` 注册
 
 - 序号必须从0开始连续编号，不能中断
-- **绝对禁止**覆盖或重排前9个主阵营的索引，否则遭遇战/LAN地图会崩溃
+- **绝对禁止**覆盖或重排**已有阵营的索引**（MO 3.3.6 为 0-12 共 13 个国家 + 13=Neutral + 14=Special），否则遭遇战/LAN地图会崩溃
 - 格式：`序号=阵营名`
 
 ```ini
@@ -339,20 +341,22 @@ Verses=50%,  50%,  50%,  90%,  80%,   70%,  65%, 50%,  60%,     30%,100%
 
 ### 流程 D：修改辐射场
 
-**关键规则**：辐射场需要弹头 + 武器**双层**配置，缺一不可！
+**关键规则（2026-08-18 权威修正）**：辐射场**只由武器层 `RadLevel` 产生**（ModEnc：RadLevel Applicable to Weapons）。弹头层 RadLevel 无效，Radiation=yes 也不是辐射场开关（它是"免疫辐射单位免疫此弹头"的标记）。
 
 ```ini
 ; ✅ 正确做法
 [某武器]
-RadLevel=200             ← 武器层：必须有
+RadLevel=200             ← 武器层：产生辐射场（唯一途径！走 [RadSite] 结算）
 
 [某弹头]
-Radiation=yes            ← 弹头层：必须有
-RadLevel=200             ← 弹头层：必须有
-CellSpread=1             ← 辐射扩散范围（格数）
+Radiation=yes            ← 可选：让 ImmuneToRadiation=yes 的单位免疫此弹头
+CellSpread=1             ← 爆炸范围
 ```
 
-如果只配弹头不配武器 `RadLevel`，辐射场不会出现——这是最常见的辐射场不生效原因。
+**常见误区**：
+- ❌ 弹头层写 `RadLevel` → 无效键，引擎忽略，辐射场不出现——这是最常见的"辐射场不生效"原因（RadLevel 写错层）
+- ❌ 以为 `Radiation=yes` 是辐射场开关 → 它是伤害类型标记，与辐射场产生无关
+- ✅ 辐射工兵副武器 RadEruptionWeapon 仅武器层 RadLevel=400 即产生辐射爆发，无任何弹头配合
 
 ---
 
@@ -393,7 +397,7 @@ CellSpread=1             ← 辐射扩散范围（格数）
 - [ ] 所有克隆单位的 `Owner`/`RequiredHouses`/`ForbiddenHouses` 正确？
 - [ ] 原版单位已添加 `ForbiddenHouses=新阵营` 避免重复？
 - [ ] 武器引用的弹头名称与克隆弹头一致？
-- [ ] 辐射武器：武器和弹头都配置了 `RadLevel`？
+- [ ] 辐射武器：`RadLevel` 写在**武器层**（弹头层无效，见流程 D）？
 
 **（2026-08 华夏版全面检查补充）**
 
@@ -518,7 +522,7 @@ CellSpread=1             ← 辐射扩散范围（格数）
 1. **克隆而不修改原版**：所有华夏单位的武器、弹头都克隆一份到 `rulesmo_huaxia.ini`，不动原版数据
 2. **Owner 三级防护**：Owner + RequiredHouses + ForbiddenHouses 三重锁定，确保只有华夏能用
 3. **引用链完整性**：建筑 → 武器 → 弹头，每一环的名称必须对应正确
-4. **辐射双层配置**：武器和弹头都要写 `RadLevel`
+4. **辐射写武器层**：`RadLevel` 只能写在武器层（产生辐射场），弹头层 RadLevel 无效；弹头 `Radiation=yes` 是免疫标记不是辐射场开关（见流程 D）
 5. **先备份再修改**：每次修改前保留一份可用的备份版本
 6. **名称逐字节一致**：`Owner`、`RequiredHouses`、`ForbiddenHouses` 中的阵营名必须与 `[Countries]` 及阵营节名完全一致，一字之差就会导致单位不可见
 7. **显式锁定，不靠拼写错误**：华夏不能造的原版单位用显式 `ForbiddenHouses=Huaxia` 声明；Owner 里无效拼写"碰巧挡住"不是防护，是定时炸弹（见 A14/A15）
@@ -809,3 +813,36 @@ ForbiddenHouses=Huaxia
 **检查前先区分节来源**：该节是否在 `rulesmo_huaxia.ini` 中被覆盖？没有 → 原版写法，跳过。
 
 **另**：`[MadBlastStartAI] Warhead=MadAIWH` 的弹头无定义节——**原版 MO 遗留**（Mental Omega 1.1 旧目录同样写法），游戏正常，不要动。
+
+### A19. 死亡自爆粒子链与凝固汽油云机制（NapalmCloudPart）⭐ 改狐步舞者类单位前必读
+
+**现象背景**：华夏破坏者（SBTRHX）/半机械先驱（CYBOHX）死亡自爆曾会"留下火焰"，火焰粒子有持续伤害。2026-08-18 已为这两个单位删除火焰（保留辐射）。本节记录完整机制，**未来修改任何带粒子武器的单位（如狐步舞者 Foxtrot 类）必须理解这条链**。
+
+**完整引用链（3 层）**：
+
+```
+[单位] DeathWeapon=某武器
+  → [某武器] Warhead=某弹头          ← 武器层
+      → [某弹头] Particle=某粒子系统    ← 弹头层（触发粒子）
+          → [ParticleSystems] 某粒子系统
+              HoldsWhat=某粒子类型       ← 粒子系统层
+                  → [某粒子类型] Damage=xx / Warhead=某弹头   ← 粒子类型层（伤害在这里！）
+```
+
+**以本次破坏者自爆为例**：
+
+| 层 | 节 | 关键键 | 值 |
+|---|---|---|---|
+| 武器 | `[SaboteurBombHX]` | Damage / Warhead | 150 / IvanDeathWH_HX |
+| 弹头 | `[IvanDeathWH_HX]` | **Particle** / RadLevel | **FoxtrotCloudSys** / 300 |
+| 粒子系统 | `[FoxtrotCloudSys]` | **HoldsWhat** / BehavesLike | **NapalmCloudPart** / Smoke（Spawns=yes 持续生成） |
+| 粒子类型 | `[NapalmCloudPart]` | **Damage / Warhead** | **20 / IvanFire**（Image=NAPALMF 火焰） |
+
+**关键认知（必须记住）**：
+1. **粒子伤害在"粒子类型"层**（`[NapalmCloudPart]` 的 `Damage=20` + `Warhead=IvanFire`），不在粒子系统、也不在弹头——想改火焰伤害改这里；想彻底去掉火焰，从**弹头**删 `Particle=` 行即可（粒子系统/类型是共享资源，不要删定义）
+2. **粒子系统可被多个弹头共用**：`FoxtrotCloudSys` 在原版 rulesmo.ini 被 3 个弹头引用（104639/104655/108512 行）+ 华夏 1 处（已删）——**只删目标弹头的 Particle 行，绝不动 [FoxtrotCloudSys] 定义本身**
+3. **死亡武器可被多个单位共用（陷阱！）**：`SaboteurBombHX` 同时被 SBTRHX 和 CYBOHX 引用——改它影响所有引用者。改单单位需克隆武器+弹头
+4. **死亡自爆的三层伤害**：爆炸瞬间（Damage×Verses）+ 火焰粒子（20/粒，IvanFire 弹头）+ 辐射场（RadLevel=300，走 RadSite 结算，对 hx_ 护甲低伤）
+5. **删除火焰保留辐射的正确写法**：只删 `Particle=FoxtrotCloudSys`，保留 `RadLevel=300`（2026-08-18 已按此执行，备份 bak_20260818_mp5 之后的状态）
+
+**未来改狐步舞者（Foxtrot 类）的入手点**：若该单位武器带 `Particle=FoxtrotCloudSys`，调火焰伤害 → 改 `[NapalmCloudPart]` 的 Damage/Warhead（注意全局影响！所有用该粒子的武器都会变）；若只想让某武器无火焰 → 删对应弹头的 Particle 行。
