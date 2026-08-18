@@ -7,26 +7,39 @@
 ## 一、NavalTargeting / LandTargeting 详解
 
 控制单位武器对海军和陆地目标的攻击行为。
+**（2026-08-18 依据 ModEnc 权威值修正，旧表有误导）**
 
-### 值含义
+### NavalTargeting 值含义（ModEnc 权威）
 
-| 值 | NavalTargeting | LandTargeting |
-|----|---------------|---------------|
-| 0 | 不能攻击海军 | 主武器打陆地 |
-| 1 | 副武器攻击海军 | 副武器打陆地 |
-| 2 | 主武器攻击海军 | 主武器对地不可用，副武器打陆地 |
-| 3 | 主副武器都能打海军 | — |
-| 5 | **可攻击潜艇** | — |
-| 6 | 可攻击潜艇（另一模式） | — |
+| 值 | 含义 | 说明 |
+|----|------|------|
+| 0 | 不能攻击**未显形的潜艇**；普通海军用主武器正常攻击 | 默认值（"UNDERWATER_NEVER"） |
+| 1 | **副武器**攻击潜艇（主武器正常打普通海军） | "UNDERWATER_SECONDARY" |
+| 2 | **只能用主武器**攻击潜艇，不能攻击其他任何目标 | "UNDERWATER_ONLY" |
+| 3 | 对有机(Organic=yes)/非自然(Unnatural=yes)单位用**副武器**，其他用主武器 | "ORGANIC_SECONDARY" |
+| 4 | 对有机/悬浮(Hover)单位用**主武器**，其他用副武器 | "SEAL_SPECIAL" |
+| 5 | **主武器攻击所有海军（含潜艇）**——反潜舰标准配置 | "NAVAL_ALL" |
+| 6 | **不能攻击水面/水中单位**（防空炮对海无效） | "NAVAL_NONE" |
+| 7 | 与 5 无实质区别（Westwood 注释误导，勿用） | — |
 
-### 实战示例
+> ⚠️ 常见误解纠正：值 0 不是"不能攻击海军"（普通海军照样打）；值 6 不是"另一种反潜"，恰恰相反是**禁用对海攻击**。
+
+### LandTargeting 值含义（ModEnc 权威）
+
+| 值 | 含义 |
+|----|------|
+| 0 | 陆地正常（主武器打陆地） |
+| 1 | **不能攻击陆地**（纯防空/纯对海） |
+| 2 | **只能副武器打陆地**（主武器不能打陆地） |
+
+### 实战示例（已按权威修正注释）
 
 ```ini
-; 原版战列舰 — 主炮打地，副炮打海
+; 原版战列舰 — 主炮打海军（不含潜艇），副炮打陆地
 [HCRUIS]
 NavalTargeting=0
 LandTargeting=2
-; 结果：Primary 只能打陆地，Secondary 只能打海军
+; 结果：Primary 打普通海军，Secondary 打陆地
 
 ; 剑鱼反潜舰 — 主炮即可打潜艇
 [SWORD]
@@ -87,24 +100,28 @@ Experience.SpawnOwnerModifier=75%  ; 子单位获得母体经验的百分比
 
 ---
 
-## 四、辐射场双层配置
+## 四、辐射场机制（2026-08-18 依据 ModEnc/RA2DIY 权威修正）
 
-辐射场需同时在武器和弹头中配置：
+**核心：辐射场只由武器层 `RadLevel` 产生**（ModEnc：RadLevel "Applicable to: Weapons"；RA2DIY：辐射代码必须写在武器主体）。
 
 ```ini
-; 武器层
+; ✅ 正确写法 — 武器层 RadLevel 是产生辐射场的唯一途径
 [130mm]
-RadLevel=200          ; 辐射强度
+Damage=90
+Warhead=ARTYHE_HX
+RadLevel=200          ; 武器层：辐射强度（产生辐射场，走 [RadSite] 结算）
 
-; 弹头层
+; 弹头层（注意！）
 [ARTYHE_HX]
-Radiation=yes         ; ★ 必须！否则辐射场不可见
-RadLevel=200          ; 辐射强度
-CellSpread=2          ; 辐射扩散范围（格）
+Radiation=yes         ; 弹头伤害类型标记：ImmuneToRadiation 单位免疫此弹头（≠辐射场开关！）
+CellSpread=2          ; 爆炸范围
 ```
 
-- 仅设 `RadLevel` 而不设 `Radiation=yes` → 辐射场不显示
-- `CellSpread` 控制辐射场扩散半径
+**重要澄清（旧版"双层配置"说法有误，勿照抄）**：
+- ❌ **弹头层 `RadLevel` 无效**（引擎不读，纯冗余）——130mm 的辐射实际来自武器层 RadLevel=200
+- ❌ `Radiation=yes` **不是辐射场显示开关**——官方作用（ModEnc 原文）："ImmuneToRadiation=yes 的单位不能被此弹头伤害"
+- ✅ 武器层 `RadLevel` **单独即可产生辐射场**（如辐射工兵副武器 RadEruptionWeapon 只有武器层 RadLevel=400）
+- 辐射场伤害由 `[RadSite]` 弹头结算（Verses 修正），可用 `Versus.hx_*` 覆盖（华夏辐射抗性机制）
 
 ---
 
@@ -165,14 +182,15 @@ Verses=...,100%,...
 
 ---
 
-## 八、LandTargeting 详解
+## 八、LandTargeting 详解（2026-08-18 依据 ModEnc 修正）
 
 | 值 | 含义 |
 |----|------|
-| 0 | Primary 打陆地，Secondary 正常使用 |
-| 1 | Primary 正常使用，Secondary 打陆地 |
-| 2 | Primary 不能打陆地，Secondary 打陆地+海军 |
-| 3+ | 不常用 |
+| 0 | 陆地正常（主武器打陆地） |
+| 1 | **不能攻击陆地**（防空炮 NAFLAK 用此值 + NavalTargeting=6 → 纯防空） |
+| 2 | **只能副武器打陆地**（主武器不能打陆地；战列舰 HCRUIS 用此值 → 主炮打海、副炮打陆） |
+
+> ⚠️ 旧版误写"1=Primary正常使用，Secondary打陆地"——**错误**。值 1 是"不能打陆地"（LAND_NOT_OKAY）。
 
 ---
 
@@ -183,5 +201,5 @@ Verses=...,100%,...
 | 单位模型透明 | Turret=yes + Spawner虚拟武器 | Turret=no |
 | 子单位模型透明 | Owner 不含母体阵营 | 追加阵营到子单位 Owner |
 | 调用子单位崩溃 | AircraftTypes 编号不连续 | 不克隆子单位，直接复用原版 |
-| 辐射场不显示 | 弹头缺少 Radiation=yes | 武器+弹头双层配置 |
+| 辐射场不生效 | `RadLevel` 写在弹头层（无效），武器层缺失 | RadLevel 移至武器层（见第四节） |
 | 单位不在列表 | 阵营名拼写错误 | 检查 Owner/RequiredHouses 拼写 |
