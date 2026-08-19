@@ -651,7 +651,7 @@ Ares 的规则合并是**按键覆盖**（section 级 merge），不是整节替
 - 在 `rulesmo_huaxia.ini` 中**删除某个键** → 原版该键的值自动生效
 - **删除整个覆盖节**（如删除 `[NAFLAK]` 节）→ 原版该建筑完全恢复原样
 
-**复用场景**：本次恢复 NAFLAK 共享时，直接删除整个 `[NAFLAK]` 覆盖节，原版（`Owner` 含全列表 + `FlakWeapon` + `Cost=700`）即恢复。当时原版 `Owner` 末尾挂着无效拼写 `Huavia`，华夏"碰巧"不能造原版 NAFLAK，正好避免与 NAFLAKHX 重复。⚠️ **注意：这个"碰巧"是地雷，不是设计**——2026-08-18 已全面清理该拼写（见 A14），华夏不能造原版 NAFLAK 现在靠"Owner 不含 Huaxia + 显式 `ForbiddenHouses=Huaxia`"双保险（见 A15）。
+**复用场景**：本次恢复 NAFLAK 共享时，直接删除整个 `[NAFLAK]` 覆盖节，原版（`Owner` 含全列表 + `FlakWeapon` + `Cost=700`）即恢复。⚠️ **注意：不要以为"Owner 不含 Huaxia"就能挡住华夏**——由于共享工厂机制（见 A20），华夏本来就能造 Owner 含 USSR/Latin/Chinese 的原版单位，**必须显式 `ForbiddenHouses=Huaxia` 才能锁定**（见 A15）。
 
 ### A5. 超武目标引用残留排查（SW.Designators 等）
 
@@ -721,7 +721,7 @@ SOVTECH=NATECHR,NATECHC,NATEK,NATEKHX
 **问题**：华夏版将共享防空炮 NAFLAK 变成华夏独占（`ForbiddenHouses=USSR,Latin,Chinese`），苏军三家失去防空能力，且武器/价格被改。
 **决策**：采用"克隆专属版"方案——原版恢复共享，华夏用专属克隆。
 **实施**：
-1. 删除 `rulesmo_huaxia.ini` 中整个 `[NAFLAK]` 覆盖节 → 原版恢复（苏军三家可造，华夏不能造原版，无重复；当时依赖原版 Owner 里无效拼写 `Huavia` 挡住，2026-08-18 起改为显式 `ForbiddenHouses=Huaxia` 锁定，见 A14/A15）
+1. 删除 `rulesmo_huaxia.ini` 中整个 `[NAFLAK]` 覆盖节 → 原版恢复（苏军三家可造；华夏靠显式 `ForbiddenHouses=Huaxia` 锁定——共享工厂机制下 Owner 不含华夏挡不住，见 A15/A20）
 2. 新建 `[NAFLAKHX]`（A3 模板），使用 `FlakWeaponHX`（射程 15）、`Cost=900`
 3. 注册 `1159=NAFLAKHX`
 4. 验证依赖：`FlakFake`/`FlakWeaponHX`/`FlakCannonWH` 均存在，无悬挂引用
@@ -752,7 +752,7 @@ sed -i 's/Huavia/Huaxia/g' rulesmo.ini  # 修正 Name/注释
 
 **需求**：确保华夏不能建造"原版防空炮 NAFLAK"和"野牛运输艇"（= `[SAPC]`，Name=**Zubr Transport**，Zubr 即野牛；Prerequisite=NAYARD、Image=TRS）。
 
-**现状判断**：这两个原版单位的 Owner 里本来就没有有效 `Huaxia`（NAFLAK 只有无效 `Huavia`），华夏原本就造不了——**但"原本造不了"依赖拼写错误，不安全**（见 A14）。
+**现状判断**：这两个原版单位的 Owner 不含 `Huaxia`——**但按共享工厂机制（见 A20），华夏本来就能造它们**（Owner 含 USSR/Latin/Chinese + 前置满足）。"Owner 不含华夏"从来不是有效的拦截手段，**只有显式 `ForbiddenHouses=Huaxia` 才能锁定**。
 
 **做法**：延续 `rulesmo_huaxia.ini` 开头的"原版苏联单位禁用区"模式（E2/FLAKT/SUB/DRED/DBOAT 同款写法），显式追加：
 
@@ -846,3 +846,29 @@ ForbiddenHouses=Huaxia
 5. **删除火焰保留辐射的正确写法**：只删 `Particle=FoxtrotCloudSys`，保留 `RadLevel=300`（2026-08-18 已按此执行，备份 bak_20260818_mp5 之后的状态）
 
 **未来改狐步舞者（Foxtrot 类）的入手点**：若该单位武器带 `Particle=FoxtrotCloudSys`，调火焰伤害 → 改 `[NapalmCloudPart]` 的 Damage/Warhead（注意全局影响！所有用该粒子的武器都会变）；若只想让某武器无火焰 → 删对应弹头的 Particle 行。
+
+### A20. Factory 共享 Owner 机制（⭐ 2026-08-19 重大认知修正，排雷必读）
+
+**ModEnc 权威机制**（Owner 页面原文）：
+> *"If a player owns a Factory building with at least 1 Owner= country that both factory and unit share, then given you fulfill all the other Prerequisites you can build the unit."*
+
+**核心**：RA2 的建造判定**不是"玩家国家在单位 Owner 列表里"**，而是 **"玩家生产建筑（Factory）的 Owner ∩ 单位 Owner ≠ ∅"**！
+
+**对华夏的致命影响**：
+- 华夏的共享工厂（NAHAND 兵营 / NAWEAP 战车厂 / **NAAIR 空军指挥部** / NAYARD 船坞等）Owner = `USSR,Latin,Chinese,Huaxia`
+- → **华夏能造"所有" Owner 含 USSR/Latin/Chinese 的苏联通用单位**（只要前置满足且未显式禁用）
+- 实测案例：FOX（狐步舞者，Owner=USSR,Latin,Chinese、前置仅 NAAIR）——华夏造 NAAIR 后车辆栏出现，**可正常建造**（用户实测确认）；LIONH（狮心轰炸机，前置 NACNST+SOVTECH，SOVTECH 虚前置含 NATEKHX 华夏满足）同样漏网
+
+**错误认知修正（旧判断作废）**：
+- ❌ 旧："Owner 不含 Huaxia → 华夏不能造"（A4/A13/A14 早期表述）
+- ✅ 新：**Owner 含 USSR/Latin/Chinese 的苏联通用单位华夏都可能造——唯一可靠拦截是显式 `ForbiddenHouses=Huaxia`**
+
+**为什么华夏步兵/载具列表看起来"正常"**（2026-08-19 分析）：
+- 恰好被两层覆盖：① 禁用区 12 个单位（E2/FLAKT/FLAMER/IVAN/ZEP/SHK/REAP/REAPL/SWLF/SUB/DRED/DBOAT）；② 前置隔离（如天启 APOC 需 `NATECHC` 科技中心，Owner=Latin 华夏没有）
+- 飞机 FOX/LIONH 是漏网（前置仅共享建筑）→ 2026-08-19 已补禁
+
+**排雷方法（检查华夏能否造某原版单位）**：
+1. 单位 Owner 是否含 USSR/Latin/Chinese（或与华夏工厂共享）？
+2. 前置是否华夏可满足？（NATECHC 等苏联专属建筑=天然隔离；SOVTECH 虚前置含 NATEKHX=华夏满足）
+3. 是否已有 `ForbiddenHouses=Huaxia`？
+→ 三个条件判断后，需要禁用的就补进禁用区（huaxia.ini 开头 [General] 之后）。
