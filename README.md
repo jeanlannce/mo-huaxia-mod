@@ -1,4 +1,4 @@
-# Mental Omega 华夏版 · 规则修改（Huaxia Faction）
+# Mental Omega 华夏版（Huaxia Faction）
 
 基于 **Mental Omega 3.3.6**（Ares 引擎）的华夏阵营（Huaxia）规则修改包。
 
