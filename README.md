@@ -1,4 +1,4 @@
-# Mental Omega 华夏版 · 规则修改（Huaxia Faction）
+# Mental Omega 华夏版（Huaxia Faction）
 
 基于 **Mental Omega 3.3.6**（Ares 引擎）的华夏阵营（Huaxia）规则修改包。
 
@@ -11,7 +11,7 @@
 | `rulesmo.ini` | 主规则文件（已修正历史拼写问题，华夏专属修改在此基础上的子文件覆盖） |
 | `rulesmo_huaxia.ini` | **华夏专属子文件**（核心修改：克隆单位/建筑、辐射武器、阵营权限锁定） |
 | `rulesmo_override.ini` | 华夏禁用单位覆盖（最后加载） |
-| `MO_INI机制详解.md` | INI 关键机制整理（NavalTargeting / Spawn 子机 / 辐射双层配置等） |
+| `MO_INI机制详解.md` | INI 关键机制整理|
 | `MO_INI修改经验.md` | 零基础修改手册 + 实战案例 + 健康检查流程 |
 
 ## 安装方法
