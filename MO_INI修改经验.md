@@ -872,3 +872,55 @@ ForbiddenHouses=Huaxia
 2. 前置是否华夏可满足？（NATECHC 等苏联专属建筑=天然隔离；SOVTECH 虚前置含 NATEKHX=华夏满足）
 3. 是否已有 `ForbiddenHouses=Huaxia`？
 → 三个条件判断后，需要禁用的就补进禁用区（huaxia.ini 开头 [General] 之后）。
+
+### A21. `Ammo=-1` 才是无限弹药（`Ammo=0` = 空弹夹无法开火！）⭐ 2026-08-22
+
+**ModEnc 权威**：`Ammo` 默认值 = **-1（无限弹药）**。`Ammo=0` = 零发弹药 = 单位**永远无法射击**（对地对空全失效）。
+
+**实战翻车**：哨兵 SENTHX 改 `Ammo=6 → 0`（以为 0=无限），结果对地机枪/对空散弹**全部不射击**——引擎读到 0 弹药直接拒火。
+
+**正确写法**：无限弹药 = `Ammo=-1` 或**删除该键**（默认 -1）。
+
+**弹药系统相关键**：`InitialAmmo`（初始弹量）、`Reload`（装填间隔帧）、`EmptyReload`（打空后首次装填延迟）、`ReloadIncrement`（每次装填量）、`PipWrap`（弹药图标）、`ManualReload`（需回厂装填，飞机默认 yes）。
+
+### A22. 弹头护甲修正：Verses 位序 / 0% 禁止 / 自定义护甲必须显式覆盖 ⭐ 2026-08-22
+
+**Verses 11 位**：`none,flak,plate,light,medium,heavy,wood,steel,concrete,special1,special2`（第 10 位=special1、第 11 位=special2）。列表不足 11 位时"Default: 100% repeated as necessary"（补齐）。
+
+**0% 与 1% 的特殊语义（ModEnc）**：
+- `0%` = **forbidden**：该护甲是禁止目标——不接受攻击/强制攻击/反击/自动索敌（连手动都打不了）
+- `1%` = 不可自动索敌，但可手动攻击/反击
+- 负值 = 治疗
+
+**自定义护甲（f_xxx 等）必须显式 `Versus.xxx` 覆盖**——不要赌隐式默认。
+
+**实战翻车**：女娲 AA 机炮弹头 WolfhoundSA_HX 克隆自原版（只覆盖 f_hero/f_mothra/f_rock 3 种焚风护甲），**MO 实际 22 种 f_xxx 飞机护甲**，常规战机（f_spawn/f_jet/f_medium）全打不了 → 机炮不触发。修复：补全覆盖。
+
+**MO 飞机护甲全集（13 种实际使用）**：f_spawn(13) / f_jet(11) / f_harb(7) / special_2(6) / special(4) / f_medium(3) / f_dybb(2) / f_widow(2) / f_heavy(2) / f_seizer(1) / f_waste(1) / f_hskr(1) / f_shrike(1)。
+- `special`（sp1 位）= 侦察机/运输机类；`special_2`（sp2 位）= **导弹类**（V3ROCKET/V2ROCKET/DMISL 等），防空武器通常 sp2=0%
+- 防空武器 sp1 值 MO 不一致：防空步兵 FlakGuyAAGun=100%（会打侦察机）、哨兵 SentinelAA=50%
+
+### A23. 进驻建筑内步兵射击机制（OccupyWeapon + 高抛弹）⭐ 2026-08-22
+
+**Ares 进驻系统**：
+- 建筑：`CanBeOccupied=yes` + `MaxNumberOccupants=N`（Ares 键，**不是 Passengers**）+ `CanOccupyFire=yes`（允许进驻者开火）
+- 步兵：`Occupier=yes` 时进驻后使用 `OccupyWeapon`（绿/老兵）或 `EliteOccupyWeapon`（精英）
+- 民用建筑与碉堡都有 `CanOccupyFire=yes` + `UC.DamageMultiplier/UC.PassThrough`（MO 标准模板键，非差异）
+
+**实战翻车（防空步兵碉堡 bug）**：华夏 FLAKTHX 的进驻武器 `UCFlakGuyGunHX` 弹体用**普通弹道弹 FlakTProj**，从大型建筑（20 人科技要塞 CAFORT）内部发射**被建筑本体卡住** → 完全不射击（对地/对空都打不出）。改用**高抛弹 InvisibleHigh**（飞行无视阻挡）+ 补 `OccupantAnim`（进驻射击动画）后修复。
+
+**教训**：民用小建筑弹道能出膛（掩盖问题），大碉堡暴露——**"进其他建筑正常 ≠ 武器没问题"**。原版进驻武器规范 = InvisibleHigh 高抛弹 + OccupantAnim。
+
+**附带认知**：MO 大容量建筑用 `MaxNumberOccupants`（CAFORT=20 即"20人大碉堡"）；用 Passengers 搜索会漏（NABNKR Battle Bunker=6 人）。
+
+### A24. 双武器单位设计要点（Burst/ROF 节奏 + NeverUse + 纯AA弹头）2026-08-22
+
+**射击节奏三件套**：`Burst=N`（一次攻击连发 N 发）+ `ROF`（两轮间隔帧，越小越快）+ `Ammo=-1`（无限）。"持续射击" = 永不因弹药停火，节奏由 Burst+ROF 决定（例：哨兵对空 Burst=6 + ROF=60 = 每 1 秒一轮 6 连发，无限循环）。
+
+**NeverUse=yes**：引擎永不用该武器。原版哨兵 `Primary=SentinelFake（NeverUse=yes）` = 强制只用 Secondary（对空打一切）——改双武器时把 Primary 换成真武器即可。
+
+**纯 AA 弹头写法**：Verses 步兵/车辆/建筑位全 0%（forbidden 不打地面）+ 保留 sp1/sp2 与全部 `Versus.f_xxx` 飞机覆盖。注意 0% 位 = 该护甲完全禁止（地面单位不会被此武器选中）→ 自动形成"只打飞机"。
+
+**飞机支持双武器**：AircraftClass 与载具一样有 Primary/Secondary/Elite 槽（MO 先例：ORCA 导弹+导弹、STORM/SNAKE 导弹+机枪）。
+
+**武器复用安全规范**：复用他人武器（如哨兵用麒麟机枪 TigerMGHX）只读不改 = 安全；**改弹头必须克隆**（克隆改 Verses 不影响原版使用者）。
