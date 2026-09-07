@@ -1,0 +1,29 @@
+; WOLFHX 原对空副武器 MedusaHX2/MedusaEHX2 留档（2026-09-07 移除，可贴回 rulesmo_huaxia.ini）
+; 依赖弹头 MedusaWH_HX、弹体 MedusaProjHX/MedusaProjEHX 仍在主文件（ZEPHX 使用）
+; 恢复时还需在 [WOLFHX] 加回 Secondary=MedusaHX2 / EliteSecondary=MedusaEHX2
+[MedusaHX2]
+Damage=54
+ROF=5
+Range=8
+Speed=200
+Projectile=MedusaProjHX
+Warhead=MedusaWH_HX
+OmniFire=yes
+TurboBoost=yes
+Anim=V3TRAILX
+
+[MedusaEHX2]
+Damage=54
+ROF=5
+Range=8
+Speed=200
+Projectile=MedusaProjEHX
+Warhead=MedusaWH_HX
+OmniFire=yes
+TurboBoost=yes
+Anim=V3TRAILX
+
+; ============================================
+; AHMVHX: Huaxia Humvee Repair (cloned from AHMV Airborne Humvee)
+; Weapon: RepairBulletHX (Engineer-IFV repair beam clone)
+; ============================================
