@@ -924,3 +924,17 @@ ForbiddenHouses=Huaxia
 **飞机支持双武器**：AircraftClass 与载具一样有 Primary/Secondary/Elite 槽（MO 先例：ORCA 导弹+导弹、STORM/SNAKE 导弹+机枪）。
 
 **武器复用安全规范**：复用他人武器（如哨兵用麒麟机枪 TigerMGHX）只读不改 = 安全；**改弹头必须克隆**（克隆改 Verses 不影响原版使用者）。
+
+### A25. RadLevel 不能小于 [Radiation]→RadLightDelay（否则除零崩溃）⭐ 2026-09-07
+
+**ModEnc YR EIP 表**：`0065B73F` = *"武器 RadLevel 小于 [Radiation]→RadLightDelay 时，引擎对两值做整数除法得 0，再用结果作除数 → 除零崩溃"*。
+
+**实战翻车**：把华夏武器 RadLevel 从 200-500 降到 15/20（想降辐射数值/加速消退），但全局 `[Radiation] RadLightDelay=90` → `15/90=0` → **任何辐射武器命中即崩**（0xC0000094 @0x0065B73F）。且同局多次崩溃指向同一地址——排查时易被"当前操作"误导归因（曾误判猎狼犬）。
+
+**硬约束**：所有武器 RadLevel 必须 **≥ [Radiation]→RadLightDelay**（相等=除法得 1，安全；有余量更稳）。
+
+**正确做法**（若需低 RadLevel）：
+- huaxia.ini 覆盖 `[Radiation] RadLightDelay=低值`（键级合并只写此键；例 RadLevel=15/20 时设 RadLightDelay=10）
+- 注意 RadLightDelay 是辐射**光效**更新间隔（与伤害场 RadLevelDelay 独立），改小=辐射光更快淡出（视觉可接受）
+
+**相关键速查**：RadLevelDelay（伤害场强度衰减步长）、RadLevelFactor（每步衰减比）、RadLightDelay/RadLightFactor（辐射光视觉）、RadApplicationDelay（伤害结算间隔）、RadSiteWarhead（场伤害弹头）。
